@@ -1,6 +1,13 @@
 # Azure SQL Server Bicep Template
 
-This repository contains a Bicep template for deploying an Azure SQL Server.
+This repository contains a Bicep template for deploying an Azure SQL Server with a database and failover group for high availability.
+
+## Resources Deployed
+
+- **Primary SQL Server** - The main Azure SQL Server
+- **SQL Database** - A General Purpose database with 2 vCores (GP_Gen5_2 SKU)
+- **Secondary SQL Server** - A secondary server in a different region for disaster recovery
+- **Failover Group** - Automatic failover configuration between primary and secondary servers
 
 ## Prerequisites
 
@@ -13,10 +20,14 @@ This repository contains a Bicep template for deploying an Azure SQL Server.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `sqlServerName` | Yes | The name of the SQL Server (must be globally unique) |
-| `administratorLogin` | Yes | The administrator username for the SQL Server |
+| `sqlServerName` | Yes | The name of the primary SQL Server (must be globally unique) |
+| `administratorLogin` | Yes | The administrator username for the SQL Servers |
 | `administratorLoginPassword` | Yes | The administrator password (secure) |
-| `location` | No | Azure region (defaults to resource group location) |
+| `databaseName` | Yes | The name of the SQL Database |
+| `secondarySqlServerName` | Yes | The name of the secondary SQL Server (must be globally unique) |
+| `secondaryLocation` | Yes | Azure region for the secondary SQL Server |
+| `failoverGroupName` | Yes | The name of the failover group |
+| `location` | No | Azure region for primary server (defaults to resource group location) |
 | `tags` | No | Resource tags as an object |
 
 ## Deployment
@@ -47,7 +58,11 @@ az deployment group create \
   --template-file main.bicep \
   --parameters sqlServerName=<unique-server-name> \
                administratorLogin=<admin-username> \
-               administratorLoginPassword=<secure-password>
+               administratorLoginPassword=<secure-password> \
+               databaseName=<database-name> \
+               secondarySqlServerName=<secondary-server-name> \
+               secondaryLocation=<secondary-region> \
+               failoverGroupName=<failover-group-name>
 ```
 
 ### Example
@@ -56,22 +71,37 @@ az deployment group create \
 az deployment group create \
   --resource-group my-rg \
   --template-file main.bicep \
-  --parameters sqlServerName=mysqlserver123 \
+  --parameters sqlServerName=mysqlserver-primary \
                administratorLogin=sqladmin \
-               administratorLoginPassword='P@ssw0rd123!'
+               administratorLoginPassword='P@ssw0rd123!' \
+               databaseName=mydb \
+               secondarySqlServerName=mysqlserver-secondary \
+               secondaryLocation=westus \
+               failoverGroupName=myfailovergroup
 ```
 
 ## Outputs
 
 After successful deployment, the following outputs are available:
 
-- `sqlServerFqdn` - The fully qualified domain name of the SQL Server
-- `sqlServerId` - The resource ID of the SQL Server
+- `sqlServerFqdn` - The fully qualified domain name of the primary SQL Server
+- `sqlServerId` - The resource ID of the primary SQL Server
+- `sqlDatabaseId` - The resource ID of the SQL Database
+- `secondarySqlServerId` - The resource ID of the secondary SQL Server
+- `failoverGroupId` - The resource ID of the failover group
 
 ## Security Features
 
 - Minimum TLS version set to 1.2
 - Password parameter marked as secure (not logged in deployment history)
+
+## High Availability
+
+The failover group provides:
+
+- **Automatic failover** with a 60-minute grace period for data loss
+- **Read-only endpoint** can be enabled for read scale-out
+- **Geo-replication** of the database to the secondary server
 
 ## Dev Container
 
