@@ -4,12 +4,11 @@ param sqlServerName string
 @description('The Azure region for the SQL Server')
 param location string = resourceGroup().location
 
-@description('The administrator login for the SQL Server')
-param administratorLogin string
+@description('The Azure AD admin login name (e.g., user@domain.com or group name)')
+param aadAdminLogin string
 
-@description('The administrator password for the SQL Server')
-@secure()
-param administratorLoginPassword string
+@description('The Azure AD admin object ID')
+param aadAdminObjectId string
 
 @description('Tags for the SQL Server')
 param tags object = {}
@@ -31,11 +30,17 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   location: location
   tags: tags
   properties: {
-    administratorLogin: administratorLogin
-    administratorLoginPassword: administratorLoginPassword
     version: '12.0'
     minimalTlsVersion: '1.2'
     publicNetworkAccess: 'Enabled'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'User'
+      login: aadAdminLogin
+      sid: aadAdminObjectId
+      tenantId: subscription().tenantId
+      azureADOnlyAuthentication: true
+    }
   }
 }
 
@@ -61,11 +66,17 @@ resource secondarySqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   location: secondaryLocation
   tags: tags
   properties: {
-    administratorLogin: administratorLogin
-    administratorLoginPassword: administratorLoginPassword
     version: '12.0'
     minimalTlsVersion: '1.2'
     publicNetworkAccess: 'Enabled'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'User'
+      login: aadAdminLogin
+      sid: aadAdminObjectId
+      tenantId: subscription().tenantId
+      azureADOnlyAuthentication: true
+    }
   }
 }
 
